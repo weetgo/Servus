@@ -27,7 +27,9 @@
 #include <sstream>
 #include <stdexcept>
 
+#ifdef SERVUS_USE_BOOST
 #include <boost/regex.hpp>
+#endif
 
 namespace servus
 {
@@ -66,20 +68,20 @@ class uri_parse : public std::exception
 public:
     explicit uri_parse( const std::string& uri )
     {
-        _error << "Error parsing URI string: " << uri << std::endl;
+        _error = std::string( "Error parsing URI string: " ) + uri;
     }
 
     uri_parse( const uri_parse& excep )
     {
-        _error << excep._error.str();
+        _error = excep._error;
     }
 
     virtual ~uri_parse() throw() {}
 
-    virtual const char* what() const throw() { return _error.str().c_str(); }
+    virtual const char* what() const throw() { return _error.c_str(); }
 
 private:
-    std::stringstream _error;
+    std::string _error;
 };
 
 enum URIPart { SCHEME = 0, AUTHORITY, PATH, QUERY, FRAGMENT };
@@ -149,6 +151,7 @@ void _parseAuthority( URIData& data, const std::string& auth )
         throw std::invalid_argument("");
 }
 
+#ifdef SERVUS_USE_BOOST
 void _warnAboutLegacySeparator( const std::string& query )
 {
     const boost::regex legacySeparator( "[^&]*,[^&]*=" );
@@ -156,14 +159,17 @@ void _warnAboutLegacySeparator( const std::string& query )
         std::cerr << "servus::URI: Detected legacy ',' separator in query: \""
                   << query << "\". Use '&' separator instead." << std::endl;
 }
+#endif
 
 void _parseQueryMap( URIData& data )
 {
     // parse query data into key-value pairs
     std::string query = data.query;
 
+#ifdef SERVUS_USE_BOOST
     // warn if a query uses the legacy ',' separator instead of '&'
     _warnAboutLegacySeparator( query );
+#endif
 
     data.queryMap.clear();
     while( !query.empty( ))
