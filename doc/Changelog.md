@@ -1,6 +1,20 @@
 
 # Changelog {#Changelog}
 
+# git master
+
+* [68](https://github.com/HBPVis/Servus/pull/68):
+  Optimize uint128_t::getString()
+
+# Release 1.5 (09-12-2016)
+
+* [64](https://github.com/HBPVis/Servus/pull/64):
+  Add Serializable::getSchema()
+* [64](https://github.com/HBPVis/Servus/pull/64):
+  Remove C++03 support
+* [63](https://github.com/HBPVis/Servus/pull/63):
+  Make Serializable copy- and moveable
+
 # Release 1.4 (30-06-2016)
 
 * [53](https://github.com/HBPVis/Servus/pull/53):

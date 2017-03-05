@@ -23,13 +23,8 @@
 #include <servus/api.h>
 #include <servus/types.h>
 
-#ifdef SERVUS_USE_CXX03
-#  include <boost/function/function0.hpp>
-#  include <boost/shared_ptr.hpp>
-#else
-#  include <functional> // function
-#  include <memory> // shared_ptr
-#endif
+#include <functional> // function
+#include <memory> // shared_ptr
 
 namespace servus
 {
@@ -47,11 +42,7 @@ public:
     struct Data
     {
         Data() : size ( 0 ) {}
-#ifdef SERVUS_USE_CXX03
-        boost::shared_ptr< const void > ptr; //!< ptr to the binary serialization
-#else
         std::shared_ptr< const void > ptr; //!< ptr to the binary serialization
-#endif
         size_t size; //!< The size of the binary serialization
     };
 
@@ -60,6 +51,9 @@ public:
 
     /** @return the universally unique identifier of this serializable. */
     SERVUS_API virtual uint128_t getTypeIdentifier() const;
+
+    /** @return the description of the objects' data layout. */
+    virtual std::string getSchema() const { return std::string(); }
 
     /**
      * Update this serializable from its binary representation.
@@ -91,13 +85,8 @@ public:
     /** @name Change Notifications */
     //@{
     /** Callbacks for change notifications. */
-#ifdef SERVUS_USE_CXX03
-    typedef boost::function< void() > DeserializedCallback;
-    typedef boost::function< void() > SerializeCallback;
-#else
     typedef std::function< void() > DeserializedCallback;
     typedef std::function< void() > SerializeCallback;
-#endif
 
     /**
      * Register a function called after the object has been updated remotely
@@ -108,8 +97,7 @@ public:
      * @throw if a DeserializedCallback is already registered and the specified
      * callback is not 'nullptr' (or 0)
      */
-    SERVUS_API void registerDeserializedCallback(
-            const DeserializedCallback& callback );
+    SERVUS_API void registerDeserializedCallback( const DeserializedCallback& );
 
     /**
      * Register a function to be called when the serializable object is about
@@ -120,9 +108,16 @@ public:
      * @throw if a SerializedCallback is already registered and the specified
      * callback is not 'nullptr' (or 0)
      */
-    SERVUS_API void registerSerializeCallback(
-            const SerializeCallback& callback );
+    SERVUS_API void registerSerializeCallback( const SerializeCallback& );
     //@}
+
+protected:
+    SERVUS_API Serializable( const Serializable& );
+    SERVUS_API Serializable& operator=( const Serializable& );
+#ifdef SERVUS_USE_CXX11
+    SERVUS_API Serializable( Serializable&& );
+    SERVUS_API Serializable& operator=( Serializable&& );
+#endif
 
 private:
     /**
@@ -142,13 +137,6 @@ private:
     virtual std::string _toJSON() const
         { throw std::runtime_error( "JSON serialization not implemented" ); }
     //@}
-
-    Serializable( const Serializable& );
-    Serializable& operator=( const Serializable& );
-#ifdef SERVUS_USE_CXX11
-    Serializable( Serializable&& ) = delete;
-    Serializable& operator=( Serializable&& ) = delete;
-#endif
 
     class Impl;
     Impl* _impl;

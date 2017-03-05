@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2015, Cedric Stalder <cedric.stalder@gmail.com>
+/* Copyright (c) 2010-2017, Cedric Stalder <cedric.stalder@gmail.com>
  *                          Stefan Eilemann <eile@eyescale.ch>
  *                          Daniel Nachbaur <danielnachbaur@gmail.com>
  *
@@ -22,6 +22,7 @@
 #define SERVUS_UINT128_H
 
 #include <servus/api.h>
+#include <servus/types.h>
 
 #include <sstream>
 #ifdef _MSC_VER
@@ -29,6 +30,7 @@
 // using uint128_t
 #  include <basetsd.h>
 typedef UINT64     uint64_t;
+#  define snprintf _snprintf
 #else
 #  include <stdint.h>
 #endif
@@ -224,21 +226,22 @@ public:
 
     /** @return a short, but not necessarily unique, string of the value. */
     std::string getShortString() const
-        {
-            std::stringstream stream;
-            stream << std::hex << _high << _low;
-            const std::string str = stream.str();
-            return str.substr( 0, 3 ) + ".." +
-                str.substr( str.length() - 3, std::string::npos );
-        }
+    {
+        std::stringstream stream;
+        stream << std::hex << _high << _low;
+        const std::string str = stream.str();
+        return str.substr( 0, 3 ) + ".." +
+               str.substr( str.length() - 3, std::string::npos );
+    }
 
     /** @return the full string representation of the value. */
     std::string getString() const
-        {
-            std::stringstream stream;
-            stream << *this;
-            return stream.str();
-        }
+    {
+        // OPT: snprintf is faster than using std::stringstream
+        char buffer[ 34 ] /* 2 x 16 bytes + : + \0 */;
+        snprintf( buffer, 34, "%llx:%llx", ull_t( high( )), ull_t( low( )));
+        return std::string( buffer );
+    }
 
     /** Serialize this object to a boost archive. */
     template< class Archive >
@@ -342,32 +345,8 @@ SERVUS_API uint128_t make_UUID();
 
 }
 
-#if __cplusplus >= 201103L || _MSC_VER > 1500
-// C++11
-#  define SERVUS_HASH_NAMESPACE_OPEN namespace std {
-#  define SERVUS_HASH_NAMESPACE_CLOSE }
-#  define SERVUS_HASH_USE_STRUCT
-#  include <functional>
-#elif defined __clang__ || defined __xlC__ || defined __GNUC__
-// C++03 with clang and xlC
-#  define SERVUS_HASH_NAMESPACE_OPEN namespace std { namespace tr1 {
-#  define SERVUS_HASH_NAMESPACE_CLOSE }}
-#  define SERVUS_HASH_USE_STRUCT
-#  include <tr1/unordered_set>
-#elif _MSC_VER < 1600
-// C++03 with MSVC
-#  define SERVUS_HASH_NAMESPACE_OPEN namespace std {
-#  define SERVUS_HASH_NAMESPACE_CLOSE }
-#  define SERVUS_HASH_USE_FUNCTORS
-#else
-// Unknown compiler, hash support is disabled.
-#  define SERVUS_HASH_NONE
-#endif
-
-#ifndef SERVUS_HASH_NONE
-SERVUS_HASH_NAMESPACE_OPEN
-#  ifdef SERVUS_HASH_USE_STRUCT
-
+namespace std
+{
 template<> struct hash< servus::uint128_t >
 {
     typedef size_t result_type;
@@ -379,19 +358,10 @@ template<> struct hash< servus::uint128_t >
     }
 };
 
-#  else // SERVUS_HASH_USE_FUNCTORS
-
-template<> inline size_t hash_compare< servus::uint128_t >::operator()
-    ( const servus::uint128_t& key ) const
+inline string to_string( const servus::uint128_t& value )
 {
-    return static_cast< size_t >( key.high() ^ key.low( ));
+    return value.getString();
+}
 }
 
-template<> inline size_t hash_value( const servus::uint128_t& key )
-    { return static_cast< size_t >( key.high() ^ key.low( )); }
-#  endif
-
-SERVUS_HASH_NAMESPACE_CLOSE
-
-#endif // SERVUS_HASH
 #endif // SERVUS_UINT128_H
